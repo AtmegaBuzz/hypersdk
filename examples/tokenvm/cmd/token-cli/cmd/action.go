@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/ava-labs/avalanchego/ids"
@@ -21,6 +22,7 @@ import (
 	"github.com/ava-labs/hypersdk/pubsub"
 	"github.com/ava-labs/hypersdk/rpc"
 	hutils "github.com/ava-labs/hypersdk/utils"
+	"github.com/boltdb/bolt"
 	"github.com/spf13/cobra"
 )
 
@@ -108,10 +110,30 @@ var transferCmd = &cobra.Command{
 		}
 
 		// Select recipient
-		recipient, err := handler.Root().PromptAddress("recipient")
+		recipient, err := handler.Root().PromptString("recipient", 1, 64)
+
 		if err != nil {
 			return err
 		}
+
+		db, err := bolt.Open("tokenvm.db", 0600, nil)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if len(recipient) != 64 {
+			var alias_addr, _ = ResolveAlias(db, recipient)
+
+			if alias_addr == "" {
+				log.Fatal("alias not found")
+			}
+
+			recipient = alias_addr
+
+		}
+
+		var recipient_conv, _ = utils.ParseAddress(recipient)
 
 		// Select amount
 		amount, err := handler.Root().PromptAmount("amount", decimals, balance, nil)
@@ -127,7 +149,7 @@ var transferCmd = &cobra.Command{
 
 		// Generate transaction
 		_, _, err = sendAndWait(ctx, nil, &actions.Transfer{
-			To:    recipient,
+			To:    recipient_conv,
 			Asset: assetID,
 			Value: amount,
 		}, cli, scli, tcli, factory, true)
@@ -206,6 +228,7 @@ var mintAssetCmd = &cobra.Command{
 			hutils.Outf("{{red}}exiting...{{/}}\n")
 			return nil
 		}
+
 		if owner != utils.Address(priv.PublicKey()) {
 			hutils.Outf("{{red}}%s is the owner of %s, you are not{{/}}\n", owner, assetID)
 			hutils.Outf("{{red}}exiting...{{/}}\n")
@@ -220,10 +243,29 @@ var mintAssetCmd = &cobra.Command{
 		)
 
 		// Select recipient
-		recipient, err := handler.Root().PromptAddress("recipient")
+		recipient, err := handler.Root().PromptString("recipient", 1, 64)
 		if err != nil {
 			return err
 		}
+
+		db, err := bolt.Open("tokenvm.db", 0600, nil)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if len(recipient) != 64 {
+			var alias_addr, _ = ResolveAlias(db, recipient)
+
+			if alias_addr == "" {
+				log.Fatal("alias not found")
+			}
+
+			recipient = alias_addr
+
+		}
+
+		var recipient_conv, _ = utils.ParseAddress(recipient)
 
 		// Select amount
 		amount, err := handler.Root().PromptAmount("amount", decimals, consts.MaxUint64-supply, nil)
@@ -240,7 +282,7 @@ var mintAssetCmd = &cobra.Command{
 		// Generate transaction
 		_, _, err = sendAndWait(ctx, nil, &actions.MintAsset{
 			Asset: assetID,
-			To:    recipient,
+			To:    recipient_conv,
 			Value: amount,
 		}, cli, scli, tcli, factory, true)
 		return err

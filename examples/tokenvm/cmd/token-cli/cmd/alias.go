@@ -45,7 +45,7 @@ func AddAliasFunc(alias_name string, address string) error {
 
 	appendAlias(db, alias_name, address)
 
-	addrValue, err := resolveAlias(db, alias_name)
+	addrValue, err := ResolveAlias(db, alias_name)
 
 	fmt.Printf("Alias added for %s Value: %s\n", alias_name, addrValue)
 
@@ -54,9 +54,9 @@ func AddAliasFunc(alias_name string, address string) error {
 	return nil
 }
 
-func resolveAlias(db *bolt.DB, key string) (string, error) {
+func ResolveAlias(db *bolt.DB, key string) (string, error) {
 
-	var resolvedAliasValue string
+	var resolvedAliasValue string = ""
 
 	err := db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("AliasBucket"))
