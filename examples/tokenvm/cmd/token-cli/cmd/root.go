@@ -55,6 +55,7 @@ func init() {
 		actionCmd,
 		spamCmd,
 		prometheusCmd,
+		aliasCmd,
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&dbPath,
@@ -131,6 +132,10 @@ func init() {
 		setKeyCmd,
 		balanceKeyCmd,
 		faucetKeyCmd,
+	)
+
+	aliasCmd.AddCommand(
+		addAliasCmd,
 	)
 
 	// chain
