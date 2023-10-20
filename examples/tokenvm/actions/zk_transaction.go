@@ -135,8 +135,8 @@ func UnmarshalZkTransaction(p *codec.Packer, _ *warp.Message) (chain.Action, err
 
 	copy(assetSlice[:], create.Asset[:]) // Copy data from the array to the slice
 
-	p.UnpackBytes(MaxNFTIDSize, true, &fromBytes)
-	p.UnpackBytes(MaxNFTURLSize, true, &toBytes)
+	p.UnpackBytes(256, true, &fromBytes)
+	p.UnpackBytes(256, true, &toBytes)
 	p.UnpackBytes(32, true, &assetSlice)
 	return &create, p.Err()
 }

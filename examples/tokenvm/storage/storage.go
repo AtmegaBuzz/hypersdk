@@ -747,3 +747,54 @@ func StoreNFT(key string, id []byte, metadata []byte, owner []byte, url []byte) 
 	return nil
 
 }
+
+type NFTRef struct {
+	TransactionHash []byte `json:"transactionHash"`
+	ID              []byte `json:"id"`
+	Metadata        []byte `json:"metadata"`
+	Owner           []byte `json:"owner"`
+	URL             []byte `json:"url"`
+}
+
+func RetriveAllNFT(key string) ([]NFTRef, error) {
+
+	db, err := bolt.Open("tokenvm.db", 0600, nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var NFTs []NFTRef
+
+	_err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("nftbucket"))
+		if bucket == nil {
+			return nil // Bucket does not exist
+		}
+
+		c := bucket.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			// k is the key, v is the value
+
+			nft_data := strings.Split(string(v), ",")
+			buffNFT := NFTRef{
+				TransactionHash: k,
+				ID:              []byte(nft_data[0]),
+				Metadata:        []byte(nft_data[1]),
+				Owner:           []byte(nft_data[2]),
+				URL:             []byte(nft_data[3]),
+			}
+			NFTs = append(NFTs, buffNFT)
+		}
+
+		return nil
+	})
+
+	if _err != nil {
+		log.Fatal(_err)
+	}
+
+	return NFTs, nil
+
+}

@@ -900,9 +900,43 @@ var getNFTCmd = &cobra.Command{
 
 		nft_data, _ := storage.RetriveNFT(NftId)
 
-		handler.Root().PromptString(nft_data[3], 1, 256)
+		hutils.Outf("{{green}}NFT MetaData:{{/}} %s\n", nft_data[1])
+		hutils.Outf("{{green}}NFT Owner:{{/}} %s\n", nft_data[2])
+		hutils.Outf("{{green}}NFT URL:{{/}} %s\n", nft_data[3])
 
-		return err
+		return nil
+	},
+}
+
+var getMyNFTCmd = &cobra.Command{
+	Use: "get-my-nft",
+	RunE: func(*cobra.Command, []string) error {
+
+		ctx := context.Background()
+		walletId, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		// Add symbol to token
+		NftId, err := handler.Root().PromptString("NFT ID", 1, 256)
+		if err != nil {
+			return err
+		}
+
+		getnft := actions.GetNFT{
+			ID: []byte(NftId),
+		}
+
+		_, _, err = sendAndWait(ctx, nil, &getnft, cli, scli, tcli, factory, true)
+
+		nft_data, _ := storage.RetriveNFT(NftId)
+
+		hutils.Outf("{{green}}NFT MetaData:{{/}} %s\n", nft_data[1])
+		hutils.Outf("{{green}}NFT Owner:{{/}} %s\n", nft_data[2])
+		hutils.Outf("{{green}}NFT URL:{{/}} %s\n", nft_data[3])
+
+		return nil
 	},
 }
 
@@ -910,7 +944,7 @@ var zkTransactionCmd = &cobra.Command{
 	Use: "zk-transaction",
 	RunE: func(*cobra.Command, []string) error {
 		ctx := context.Background()
-		_, priv, factory, cli, scli, tcli, err := handler.DefaultActor()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
 		if err != nil {
 			return err
 		}
@@ -920,36 +954,20 @@ var zkTransactionCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, _, balance, _, err := handler.GetAssetInfo(ctx, tcli, priv.PublicKey(), assetID, true)
-		if balance == 0 || err != nil {
+
+		// Select recipient
+		from, err := handler.Root().PromptAddress("your wallet address")
+
+		if err != nil {
 			return err
 		}
 
 		// Select recipient
-		recipient, err := handler.Root().PromptString("recipient", 1, 64)
+		recipient, err := handler.Root().PromptAddress("recipient")
 
 		if err != nil {
 			return err
 		}
-
-		db, err := bolt.Open("tokenvm.db", 0600, nil)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if len(recipient) != 64 {
-			var alias_addr, _ = ResolveAlias(db, recipient)
-
-			if alias_addr == "" {
-				log.Fatal("alias not found")
-			}
-
-			recipient = alias_addr
-
-		}
-
-		var recipient_conv, _ = utils.ParseAddress(recipient)
 
 		// Confirm action
 		cont, err := handler.Root().PromptContinue()
@@ -959,7 +977,8 @@ var zkTransactionCmd = &cobra.Command{
 
 		// Generate transaction
 		_, _, err = sendAndWait(ctx, nil, &actions.ZkTransaction{
-			To:    recipient_conv,
+			From:  from,
+			To:    recipient,
 			Asset: assetID,
 		}, cli, scli, tcli, factory, true)
 		return err

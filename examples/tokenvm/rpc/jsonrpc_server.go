@@ -4,9 +4,12 @@
 package rpc
 
 import (
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/boltdb/bolt"
 
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/examples/tokenvm/genesis"
@@ -184,4 +187,77 @@ func (j *JSONRPCServer) Loan(req *http.Request, args *LoanArgs, reply *LoanReply
 	}
 	reply.Amount = amount
 	return nil
+}
+
+type MyNFTArgs struct {
+	WalletAddress string `json:"address"`
+	ID            ids.ID `json:"id"`
+}
+
+type NFTRef struct {
+	TransactionHash []byte `json:"transactionHash"`
+	ID              []byte `json:"id"`
+	Metadata        []byte `json:"metadata"`
+	Owner           []byte `json:"owner"`
+	URL             []byte `json:"url"`
+}
+
+type MyNFTReply struct {
+	Nfts []NFTRef `json:"nfts"`
+}
+
+func (j *JSONRPCServer) GetMyNFTs(req *http.Request, args *MyNFTArgs, reply *MyNFTReply) error {
+
+	_, span := j.c.Tracer().Start(req.Context(), "Server.NFT")
+	defer span.End()
+
+	addr, err := utils.ParseAddress(args.WalletAddress)
+	if err != nil {
+		return err
+	}
+
+	db, err := bolt.Open("tokenvm.db", 0600, nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var NFTs []NFTRef
+
+	_err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("nftbucket"))
+		if bucket == nil {
+			return nil // Bucket does not exist
+		}
+
+		c := bucket.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			// k is the key, v is the value
+
+			nft_data := strings.Split(string(v), ",")
+
+			if nft_data[2] == utils.Address(addr) {
+
+				buffNFT := NFTRef{
+					TransactionHash: k,
+					ID:              []byte(nft_data[0]),
+					Metadata:        []byte(nft_data[1]),
+					Owner:           []byte(nft_data[2]),
+					URL:             []byte(nft_data[3]),
+				}
+
+				NFTs = append(NFTs, buffNFT)
+			}
+		}
+
+		return nil
+	})
+
+	if _err != nil {
+		log.Fatal(_err)
+	}
+
+	reply.Nfts = NFTs
+	return err
 }
