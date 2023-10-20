@@ -164,7 +164,6 @@ func init() {
 		createNFTCmd,
 		mintAssetCmd,
 		// burnAssetCmd,
-
 		createOrderCmd,
 		fillOrderCmd,
 		closeOrderCmd,
@@ -172,6 +171,7 @@ func init() {
 		importAssetCmd,
 		exportAssetCmd,
 		getNFTCmd,
+		zkTransactionCmd,
 	)
 
 	// spam
