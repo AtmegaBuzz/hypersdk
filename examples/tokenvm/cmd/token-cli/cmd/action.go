@@ -872,3 +872,29 @@ var createNFTCmd = &cobra.Command{
 		return err
 	},
 }
+
+var getNFTCmd = &cobra.Command{
+	Use: "get-nft",
+	RunE: func(*cobra.Command, []string) error {
+
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		// Add symbol to token
+		NftId, err := handler.Root().PromptString("NFT ID", 1, 256)
+		if err != nil {
+			return err
+		}
+
+		getnft := actions.GetNFT{
+			ID: []byte(NftId),
+		}
+
+		_, _, err = sendAndWait(ctx, nil, &getnft, cli, scli, tcli, factory, true)
+
+		return err
+	},
+}

@@ -171,6 +171,7 @@ func init() {
 
 		importAssetCmd,
 		exportAssetCmd,
+		getNFTCmd,
 	)
 
 	// spam

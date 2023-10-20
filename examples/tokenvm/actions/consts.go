@@ -15,6 +15,7 @@ const (
 	mintAssetID   uint8 = 7
 	transferID    uint8 = 8
 	createNFTID   uint8 = 9
+	getNFTID      uint8 = 10
 )
 
 const (
@@ -37,6 +38,6 @@ const (
 	MaxDecimals     = 9
 
 	MaxNFTIDSize  = 8
-	MaxNFTURLSize = 256
+	MaxNFTURLSize = 1000
 	MaxOwnerSize  = 32
 )

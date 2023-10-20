@@ -16,7 +16,6 @@ import (
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/consts"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
-	zconsts "github.com/ava-labs/hypersdk/examples/tokenvm/actions/consts"
 	"github.com/ava-labs/hypersdk/examples/tokenvm/utils"
 	"github.com/ava-labs/hypersdk/state"
 )
@@ -661,13 +660,13 @@ func innerGetNFT(
 	if err != nil {
 		return false, nil, nil, nil, false, err
 	}
-	v := make([]byte, consts.IDLen+consts.Uint16Len+metadataLen+consts.Uint16Len+ownerdataLen+consts.Uint16Len+consts.Uint16Len+len(urlBytes))
+	// v := make([]byte, consts.IDLen+consts.Uint16Len+metadataLen+consts.Uint16Len+ownerdataLen+consts.Uint16Len+consts.Uint16Len+len(urlBytes))
 
-	nftID := ids.ID(v[:zconsts.MaxNFTIDSize])
-	metadataLen := binary.BigEndian.Uint16(v[zconsts.MaxNFTIDSize:])
-	metaData := v[consts.IDLen+consts.Uint16Len:]
-	ownerdataLen := binary.BigEndian.Uint16(v[zconsts.MaxNFTIDSize+consts.Uint16Len+metadataLen:])
-	urlBytes := v[zconsts.MaxNFTIDSize+consts.Uint16Len+metadataLen+consts.Uint16Len+ownerdataLen:]
+	// idNFT := v[:consts.IDLen]
+	metaData := v[consts.IDLen+consts.Uint16Len : consts.IDLen+consts.Uint16Len+256]
 
-	return true, []byte(nftID.String()), urlBytes, ownerdataLen, string(urlBytes), nil
+	ownerdataLen := v[consts.IDLen+consts.Uint16Len+consts.IDLen+consts.Uint16Len : consts.IDLen+consts.Uint16Len+consts.IDLen+consts.Uint16Len+256]
+	urlBytes := v[consts.IDLen+consts.Uint16Len+consts.IDLen+consts.Uint16Len+256+consts.Uint16Len:]
+
+	return true, metaData, ownerdataLen, urlBytes, false, nil
 }

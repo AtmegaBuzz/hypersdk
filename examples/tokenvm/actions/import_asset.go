@@ -109,6 +109,7 @@ func (i *ImportAsset) executeMint(
 ) []byte {
 	asset := ImportedAssetID(i.warpTransfer.Asset, i.warpMessage.SourceChainID)
 	exists, symbol, decimals, metadata, supply, _, warp, err := storage.GetAsset(ctx, mu, asset)
+
 	if err != nil {
 		return utils.ErrBytes(err)
 	}
