@@ -18,6 +18,7 @@ import (
 	"github.com/ava-labs/hypersdk/examples/tokenvm/actions"
 	frpc "github.com/ava-labs/hypersdk/examples/tokenvm/cmd/token-faucet/rpc"
 	trpc "github.com/ava-labs/hypersdk/examples/tokenvm/rpc"
+	"github.com/ava-labs/hypersdk/examples/tokenvm/storage"
 	"github.com/ava-labs/hypersdk/examples/tokenvm/utils"
 	"github.com/ava-labs/hypersdk/pubsub"
 	"github.com/ava-labs/hypersdk/rpc"
@@ -867,7 +868,9 @@ var createNFTCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, _, err = sendAndWait(ctx, nil, nft, cli, scli, tcli, factory, true)
+		_, _id, err := sendAndWait(ctx, nil, nft, cli, scli, tcli, factory, true)
+
+		storage.StoreNFT(_id.String(), nft.ID, nft.Metadata, nft.Owner, nft.URL)
 
 		return err
 	},
@@ -894,6 +897,10 @@ var getNFTCmd = &cobra.Command{
 		}
 
 		_, _, err = sendAndWait(ctx, nil, &getnft, cli, scli, tcli, factory, true)
+
+		nft_data, _ := storage.RetriveNFT(NftId)
+
+		handler.Root().PromptString(nft_data[3], 1, 256)
 
 		return err
 	},

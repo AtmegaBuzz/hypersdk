@@ -8,6 +8,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
 	"sync"
 
 	"github.com/ava-labs/avalanchego/database"
@@ -18,6 +20,7 @@ import (
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
 	"github.com/ava-labs/hypersdk/examples/tokenvm/utils"
 	"github.com/ava-labs/hypersdk/state"
+	"github.com/boltdb/bolt"
 )
 
 type ReadState func(context.Context, [][]byte) ([][]byte, []error)
@@ -669,4 +672,78 @@ func innerGetNFT(
 	urlBytes := v[consts.IDLen+consts.Uint16Len+consts.IDLen+consts.Uint16Len+256+consts.Uint16Len:]
 
 	return true, metaData, ownerdataLen, urlBytes, false, nil
+}
+
+func RetriveNFT(key string) ([]string, error) {
+
+	db, err := bolt.Open("tokenvm.db", 0600, nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var token_bytes string
+
+	_err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("nftbucket"))
+		if bucket == nil {
+			return nil // Bucket does not exist
+		}
+
+		token_bytes = string(bucket.Get([]byte(key)))
+
+		return nil
+	})
+
+	if _err != nil {
+		log.Fatal(_err)
+	}
+
+	return strings.Split(token_bytes, ","), nil
+
+}
+
+func StoreNFT(key string, id []byte, metadata []byte, owner []byte, url []byte) error {
+
+	db, err := bolt.Open("tokenvm.db", 0600, nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_err := db.Update(func(tx *bolt.Tx) error {
+		// Create or retrieve a bucket (analogous to a table in SQL)
+		bucket, err := tx.CreateBucketIfNotExists([]byte("nftbucket"))
+		if err != nil {
+			return err
+		}
+
+		store_nft_slice := [][]byte{
+			id, metadata, owner, url,
+		}
+
+		delimiter := []byte(",")
+
+		stringSlice := make([]string, len(store_nft_slice))
+
+		for i, b := range store_nft_slice {
+			stringSlice[i] = string(b)
+		}
+
+		concatenatedString := strings.Join(stringSlice, string(delimiter))
+
+		// Store key-value pairs
+		if err := bucket.Put([]byte(key), []byte(concatenatedString)); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if _err != nil {
+		log.Fatal(_err)
+	}
+
+	return nil
+
 }
