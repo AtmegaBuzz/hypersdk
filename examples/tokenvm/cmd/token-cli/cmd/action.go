@@ -958,7 +958,7 @@ var zkTransactionCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, _, err = sendAndWait(ctx, nil, &actions.zk{
+		_, _, err = sendAndWait(ctx, nil, &actions.ZkTransaction{
 			To:    recipient_conv,
 			Asset: assetID,
 		}, cli, scli, tcli, factory, true)
