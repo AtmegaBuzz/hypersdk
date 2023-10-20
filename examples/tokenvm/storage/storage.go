@@ -56,6 +56,7 @@ const (
 	feePrefix          = 0x6
 	incomingWarpPrefix = 0x7
 	outgoingWarpPrefix = 0x8
+	nftPrefix          = 0x9
 )
 
 const (
@@ -63,6 +64,7 @@ const (
 	AssetChunks   uint16 = 5
 	OrderChunks   uint16 = 2
 	LoanChunks    uint16 = 1
+	NFTChunks     uint16 = 10
 )
 
 var (
@@ -603,4 +605,38 @@ func OutgoingWarpKeyPrefix(txID ids.ID) (k []byte) {
 	k[0] = outgoingWarpPrefix
 	copy(k[1:], txID[:])
 	return k
+}
+
+// [nftPrefix] + [nftID]
+func NFTKey(nftID ids.ID) []byte {
+	k := make([]byte, 1+consts.IDLen)
+	k[0] = nftPrefix
+	copy(k[1:], nftID[:])
+	return k
+}
+
+func SetNFT(
+	ctx context.Context,
+	mu state.Mutable,
+	nftID ids.ID,
+	metadata []byte,
+	owner []byte,
+	url string, // URL to store asset metadata on IPFS
+) error {
+	k := NFTKey(nftID)
+	metadataLen := len(metadata)
+	ownerdataLen := len(owner)
+	urlBytes := []byte(url)
+	v := make([]byte, consts.IDLen+consts.Uint16Len+metadataLen+consts.ShortIDLen+consts.Uint16Len+len(urlBytes))
+
+	copy(v[:consts.IDLen], nftID[:])
+	binary.BigEndian.PutUint16(v[consts.IDLen:consts.IDLen+consts.Uint16Len], uint16(metadataLen))
+	copy(v[consts.IDLen+consts.Uint16Len:consts.IDLen+consts.Uint16Len+metadataLen], metadata)
+
+	binary.BigEndian.PutUint16(v[consts.IDLen:consts.IDLen+consts.Uint16Len], uint16(ownerdataLen))
+	copy(v[consts.IDLen+consts.Uint16Len:consts.IDLen+consts.Uint16Len+ownerdataLen], owner)
+	binary.BigEndian.PutUint16(v[consts.IDLen+consts.Uint16Len+metadataLen+consts.ShortIDLen:consts.IDLen+consts.Uint16Len+metadataLen+consts.ShortIDLen+consts.Uint16Len], uint16(len(urlBytes)))
+	copy(v[consts.IDLen+consts.Uint16Len+metadataLen+consts.ShortIDLen+consts.Uint16Len:], urlBytes)
+
+	return mu.Insert(ctx, k, v)
 }

@@ -161,6 +161,7 @@ func init() {
 		transferCmd,
 
 		createAssetCmd,
+		createNFTCmd,
 		mintAssetCmd,
 		// burnAssetCmd,
 

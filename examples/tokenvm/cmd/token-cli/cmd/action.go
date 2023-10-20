@@ -823,3 +823,52 @@ var exportAssetCmd = &cobra.Command{
 		return handler.Root().StoreDefaultChain(destination)
 	},
 }
+
+var createNFTCmd = &cobra.Command{
+	Use: "create-nft",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		// Add symbol to token
+		ID, err := handler.Root().PromptString("ID", 1, 256)
+		if err != nil {
+			return err
+		}
+
+		// Add decimal to token
+		URL, err := handler.Root().PromptString("Asset Url", 1, 256)
+		if err != nil {
+			return err
+		}
+
+		// Add metadata to token
+		metadata, err := handler.Root().PromptString("metadata", 1, actions.MaxMetadataSize)
+		if err != nil {
+			return err
+		}
+
+		Owner, err := handler.Root().PromptString("recipient", 1, 256)
+
+		// Confirm action
+		cont, err := handler.Root().PromptContinue()
+		if !cont || err != nil {
+			return err
+		}
+
+		nft := &actions.CreateNFT{
+			ID:       []byte(ID),
+			Metadata: []byte(metadata),
+			Owner:    []byte(Owner),
+			URL:      []byte(URL),
+		}
+
+		// Generate transaction
+		_, _, err = sendAndWait(ctx, nil, nft, cli, scli, tcli, factory, true)
+
+		return err
+	},
+}

@@ -14,6 +14,7 @@ const (
 	fillOrderID   uint8 = 6
 	mintAssetID   uint8 = 7
 	transferID    uint8 = 8
+	createNFTID   uint8 = 9
 )
 
 const (
@@ -28,9 +29,14 @@ const (
 	FillOrderComputeUnits   = 15
 	MintAssetComputeUnits   = 2
 	TransferComputeUnits    = 1
+	CreateNFTComputeUnits   = 2
 
 	MaxSymbolSize   = 8
 	MaxMemoSize     = 256
 	MaxMetadataSize = 256
 	MaxDecimals     = 9
+
+	MaxNFTIDSize  = 8
+	MaxNFTURLSize = 256
+	MaxOwnerSize  = 32
 )
