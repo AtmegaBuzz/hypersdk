@@ -16,9 +16,9 @@ import (
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/consts"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
-	"github.com/ava-labs/hypersdk/state"
-
+	zconsts "github.com/ava-labs/hypersdk/examples/tokenvm/actions/consts"
 	"github.com/ava-labs/hypersdk/examples/tokenvm/utils"
+	"github.com/ava-labs/hypersdk/state"
 )
 
 type ReadState func(context.Context, [][]byte) ([][]byte, []error)
@@ -627,16 +627,47 @@ func SetNFT(
 	metadataLen := len(metadata)
 	ownerdataLen := len(owner)
 	urlBytes := []byte(url)
-	v := make([]byte, consts.IDLen+consts.Uint16Len+metadataLen+consts.ShortIDLen+consts.Uint16Len+len(urlBytes))
 
-	copy(v[:consts.IDLen], nftID[:])
-	binary.BigEndian.PutUint16(v[consts.IDLen:consts.IDLen+consts.Uint16Len], uint16(metadataLen))
-	copy(v[consts.IDLen+consts.Uint16Len:consts.IDLen+consts.Uint16Len+metadataLen], metadata)
+	v := make([]byte, consts.IDLen+consts.Uint16Len+metadataLen+consts.Uint16Len+ownerdataLen+consts.Uint16Len+consts.Uint16Len+len(urlBytes))
+	// 32 + 2 +
+	copy(v[:], nftID[:])                                              //
+	binary.BigEndian.PutUint16(v[consts.IDLen:], uint16(metadataLen)) //
+	copy(v[consts.IDLen+consts.Uint16Len:], metadata)                 //
 
-	binary.BigEndian.PutUint16(v[consts.IDLen:consts.IDLen+consts.Uint16Len], uint16(ownerdataLen))
-	copy(v[consts.IDLen+consts.Uint16Len:consts.IDLen+consts.Uint16Len+ownerdataLen], owner)
-	binary.BigEndian.PutUint16(v[consts.IDLen+consts.Uint16Len+metadataLen+consts.ShortIDLen:consts.IDLen+consts.Uint16Len+metadataLen+consts.ShortIDLen+consts.Uint16Len], uint16(len(urlBytes)))
-	copy(v[consts.IDLen+consts.Uint16Len+metadataLen+consts.ShortIDLen+consts.Uint16Len:], urlBytes)
+	binary.BigEndian.PutUint16(v[consts.IDLen+consts.Uint16Len+metadataLen:], uint16(ownerdataLen))                                //
+	copy(v[consts.IDLen+consts.Uint16Len+metadataLen+consts.Uint16Len:], owner)                                                    //
+	binary.BigEndian.PutUint16(v[consts.IDLen+consts.Uint16Len+metadataLen+consts.Uint16Len+ownerdataLen:], uint16(len(urlBytes))) //
+	copy(v[consts.IDLen+consts.Uint16Len+metadataLen+consts.Uint16Len+ownerdataLen+consts.Uint16Len:], url)                        //
 
 	return mu.Insert(ctx, k, v)
+}
+
+func GetNFT(
+	ctx context.Context,
+	im state.Immutable,
+	asset ids.ID,
+) (bool, []byte, []byte, []byte, bool, error) {
+	k := NFTKey(asset)
+	return innerGetNFT(im.GetValue(ctx, k))
+}
+
+func innerGetNFT(
+	v []byte,
+	err error,
+) (bool, []byte, []byte, []byte, bool, error) {
+	if errors.Is(err, database.ErrNotFound) {
+		return false, nil, nil, nil, false, nil
+	}
+	if err != nil {
+		return false, nil, nil, nil, false, err
+	}
+	v := make([]byte, consts.IDLen+consts.Uint16Len+metadataLen+consts.Uint16Len+ownerdataLen+consts.Uint16Len+consts.Uint16Len+len(urlBytes))
+
+	nftID := ids.ID(v[:zconsts.MaxNFTIDSize])
+	metadataLen := binary.BigEndian.Uint16(v[zconsts.MaxNFTIDSize:])
+	metaData := v[consts.IDLen+consts.Uint16Len:]
+	ownerdataLen := binary.BigEndian.Uint16(v[zconsts.MaxNFTIDSize+consts.Uint16Len+metadataLen:])
+	urlBytes := v[zconsts.MaxNFTIDSize+consts.Uint16Len+metadataLen+consts.Uint16Len+ownerdataLen:]
+
+	return true, []byte(nftID.String()), urlBytes, ownerdataLen, string(urlBytes), nil
 }
