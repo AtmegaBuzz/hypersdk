@@ -32,7 +32,7 @@ const (
 	MintAssetComputeUnits     = 2
 	TransferComputeUnits      = 1
 	CreateNFTComputeUnits     = 2
-	zkTransactionComputeUnits = 1
+	ZkTransactionComputeUnits = 1
 
 	MaxSymbolSize   = 8
 	MaxMemoSize     = 256

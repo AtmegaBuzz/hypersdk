@@ -56,7 +56,7 @@ func (t *ZkTransaction) Execute(context.Context, chain.Rules, state.Mutable, int
 		coef, err := rand.Int(rand.Reader, field)
 		if err != nil {
 			fmt.Println(err)
-			return false, zkTransactionComputeUnits, nil, nil, err
+			return false, ZkTransactionComputeUnits, nil, nil, err
 		}
 		coefs[i] = coef
 	}
@@ -67,14 +67,14 @@ func (t *ZkTransaction) Execute(context.Context, chain.Rules, state.Mutable, int
 	senderPrivateKey, err := ed25519.GeneratePrivateKey()
 	if err != nil {
 		fmt.Println(err)
-		return false, zkTransactionComputeUnits, nil, nil, err
+		return false, ZkTransactionComputeUnits, nil, nil, err
 	}
 	senderPublicKey := senderPrivateKey.PublicKey()
 
 	receiverPrivateKey, err := ed25519.GeneratePrivateKey()
 	if err != nil {
 		fmt.Println(err)
-		return false, zkTransactionComputeUnits, nil, nil, err
+		return false, ZkTransactionComputeUnits, nil, nil, err
 	}
 	receiverPublicKey := receiverPrivateKey.PublicKey()
 
@@ -86,17 +86,17 @@ func (t *ZkTransaction) Execute(context.Context, chain.Rules, state.Mutable, int
 	challenge, response, err := proof.GenerateProof(senderPrivateKey[:], receiverPublicKey[:], assetCommitment)
 	if err != nil {
 		fmt.Println(err)
-		return false, zkTransactionComputeUnits, nil, nil, err
+		return false, ZkTransactionComputeUnits, nil, nil, err
 	}
 
 	err = proof.VerifyProof(senderPublicKey[:], receiverPublicKey[:], assetCommitment, challenge, response)
 	if err != nil {
 		fmt.Println(err)
-		return false, zkTransactionComputeUnits, nil, nil, err
+		return false, ZkTransactionComputeUnits, nil, nil, err
 	}
 
 	fmt.Println("The proof is valid for the sender's private key, receiver's public key, and the asset commitment.")
-	return true, zkTransactionComputeUnits, nil, nil, err
+	return true, ZkTransactionComputeUnits, nil, nil, err
 }
 
 func (*ZkTransaction) OutputsWarpMessage() bool {
@@ -108,7 +108,7 @@ func (t *ZkTransaction) Size() int {
 }
 
 func (*ZkTransaction) MaxComputeUnits(chain.Rules) uint64 {
-	return zkTransactionComputeUnits
+	return ZkTransactionComputeUnits
 }
 
 func (t *ZkTransaction) Marshal(p *codec.Packer) {

@@ -4,12 +4,17 @@
 package challenge
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha512"
+	"errors"
+	"fmt"
 	"math/big"
 	"math/bits"
 	"sync"
 	"sync/atomic"
+
+	"github.com/ava-labs/hypersdk/examples/tokenvm/actions"
 )
 
 const (
@@ -24,6 +29,35 @@ func New() ([]byte, error) {
 	b := make([]byte, saltLength)
 	_, err := rand.Read(b)
 	return b, err
+}
+
+func VerifyZKP(senderPublicKey, receiverPublicKey ed25519.PublicKey, assetCommitment, challenge, response *big.Int) error {
+
+	field := big.NewInt(256)
+
+	coefs := make([]*big.Int, 4)
+	for i := range coefs {
+		coef, err := rand.Int(rand.Reader, field)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		coefs[i] = coef
+	}
+
+	// Create a new cubic zero-knowledge proof using the field and coefficients
+	polynomial := actions.NewPolynomial(coefs...)
+
+	// Create a new cubic zero-knowledge proof
+	zkpProof := actions.NewCubicZKProof(field, polynomial)
+
+	// Verify the zero-knowledge proof
+	err := zkpProof.VerifyProof(senderPublicKey, receiverPublicKey, assetCommitment, challenge, response)
+	if err != nil {
+		return errors.New("ZKP verification failed")
+	}
+
+	return nil
 }
 
 func Verify(salt []byte, solution []byte, difficulty uint16) bool {
