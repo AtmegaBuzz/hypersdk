@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/ava-labs/avalanchego/ids"
@@ -912,29 +913,46 @@ var getMyNFTCmd = &cobra.Command{
 	Use: "get-my-nft",
 	RunE: func(*cobra.Command, []string) error {
 
-		ctx := context.Background()
-		walletId, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		_, priv, _, _, _, _, err := handler.DefaultActor()
 		if err != nil {
 			return err
 		}
 
-		// Add symbol to token
-		NftId, err := handler.Root().PromptString("NFT ID", 1, 256)
+		db, err := bolt.Open("tokenvm.db", 0600, nil)
+
 		if err != nil {
-			return err
+			log.Fatal(err)
 		}
 
-		getnft := actions.GetNFT{
-			ID: []byte(NftId),
+		_err := db.View(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket([]byte("nftbucket"))
+			if bucket == nil {
+				return nil // Bucket does not exist
+			}
+
+			c := bucket.Cursor()
+
+			for k, v := c.First(); k != nil; k, v = c.Next() {
+				// k is the key, v is the value
+
+				nft_data := strings.Split(string(v), ",")
+
+				if nft_data[2] == utils.Address(priv.PublicKey()) {
+					hutils.Outf("{{green}}Transaction Hash:{{/}} %s\n", k)
+					hutils.Outf("{{green}}NFT MetaData:{{/}} %s\n", []byte(nft_data[1]))
+					hutils.Outf("{{green}}NFT Owner:{{/}} %s\n", []byte(nft_data[2]))
+					hutils.Outf("{{green}}NFT URL:{{/}} %s\n", []byte(nft_data[3]))
+					hutils.Outf("--------------------------------------------------\n")
+
+				}
+			}
+
+			return nil
+		})
+
+		if _err != nil {
+			log.Fatal(_err)
 		}
-
-		_, _, err = sendAndWait(ctx, nil, &getnft, cli, scli, tcli, factory, true)
-
-		nft_data, _ := storage.RetriveNFT(NftId)
-
-		hutils.Outf("{{green}}NFT MetaData:{{/}} %s\n", nft_data[1])
-		hutils.Outf("{{green}}NFT Owner:{{/}} %s\n", nft_data[2])
-		hutils.Outf("{{green}}NFT URL:{{/}} %s\n", nft_data[3])
 
 		return nil
 	},
