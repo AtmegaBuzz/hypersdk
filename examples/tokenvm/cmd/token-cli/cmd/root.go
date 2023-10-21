@@ -173,6 +173,7 @@ func init() {
 		getNFTCmd,
 		getMyNFTCmd,
 		zkTransactionCmd,
+		createAndStoreNFTCmd,
 	)
 
 	// spam

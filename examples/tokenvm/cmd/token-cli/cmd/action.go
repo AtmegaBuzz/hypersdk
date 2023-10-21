@@ -5,9 +5,17 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log"
+	"mime/multipart"
+	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -843,6 +851,134 @@ var createNFTCmd = &cobra.Command{
 
 		// Add decimal to token
 		URL, err := handler.Root().PromptString("Asset Url", 1, 256)
+		if err != nil {
+			return err
+		}
+
+		// Add metadata to token
+		metadata, err := handler.Root().PromptString("metadata", 1, actions.MaxMetadataSize)
+		if err != nil {
+			return err
+		}
+
+		Owner, err := handler.Root().PromptString("recipient", 1, 256)
+
+		// Confirm action
+		cont, err := handler.Root().PromptContinue()
+		if !cont || err != nil {
+			return err
+		}
+
+		nft := &actions.CreateNFT{
+			ID:       []byte(ID),
+			Metadata: []byte(metadata),
+			Owner:    []byte(Owner),
+			URL:      []byte(URL),
+		}
+
+		// Generate transaction
+		_, _id, err := sendAndWait(ctx, nil, nft, cli, scli, tcli, factory, true)
+
+		storage.StoreNFT(_id.String(), nft.ID, nft.Metadata, nft.Owner, nft.URL)
+
+		return err
+	},
+}
+
+type PinataResponse struct {
+	IpfsHash string `json:"IpfsHash"`
+}
+
+func deployPinata(filePath, apiKey, secretApiKey string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	// Create a new buffer to store the multipart/form-data request body
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+
+	// Create a part for the file
+	part, err := writer.CreateFormFile("file", filepath.Base(filePath))
+	if err != nil {
+		return "", err
+	}
+
+	// Copy the file content into the part
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return "", err
+	}
+
+	writer.Close()
+
+	// Create the HTTP POST request
+	req, err := http.NewRequest("POST", "https://api.pinata.cloud/pinning/pinFileToIPFS", &requestBody)
+	if err != nil {
+		return "", err
+	}
+
+	// Set content type header
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Set API key headers
+	req.Header.Add("pinata_api_key", apiKey)
+	req.Header.Add("pinata_secret_api_key", secretApiKey)
+
+	// Perform the HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("API request failed with status code %d, %s", resp.StatusCode, body)
+	}
+
+	var pinataResponse PinataResponse
+	if err := json.NewDecoder(resp.Body).Decode(&pinataResponse); err != nil {
+		return "", err
+	}
+
+	imageUrl := "https://ipfs.io/ipfs/" + pinataResponse.IpfsHash
+
+	return imageUrl, nil
+}
+
+var createAndStoreNFTCmd = &cobra.Command{
+	Use: "create-store-nft",
+	RunE: func(*cobra.Command, []string) error {
+
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		// Add symbol to token
+		ID, err := handler.Root().PromptString("ID", 1, 256)
+		if err != nil {
+			return err
+		}
+
+		// Add decimal to token
+		Path, err := handler.Root().PromptString("Asset Image Path", 1, 256)
+		if err != nil {
+			return err
+		}
+
+		URL, err := deployPinata(
+			Path,
+			"",
+			"",
+		)
+
 		if err != nil {
 			return err
 		}
