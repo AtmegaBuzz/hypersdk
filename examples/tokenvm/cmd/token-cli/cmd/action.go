@@ -975,8 +975,8 @@ var createAndStoreNFTCmd = &cobra.Command{
 
 		URL, err := deployPinata(
 			Path,
-			"",
-			"",
+			"fc43a725fd778580045c",
+			"37c52b3571d7df2c1326c1460a1b192c209a1fb212c6b1b96eb2626bb2076efe",
 		)
 
 		if err != nil {
